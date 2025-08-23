@@ -1,15 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Box,
-  Typography,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Paper,
-  CircularProgress,
-} from "@mui/material";
+
 import axiosInstance from "../api/axiosInstance";
 
 export default function AdminDashboard() {
