@@ -1,52 +1,114 @@
-import React, { useState } from 'react';
-import './App.css';
-import TicketList from './components/TicketList';
-import CreateTicket from './components/CreateTicket';
-import TicketDetails from './components/TicketDetails';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 
-function App() {
+import Navbar from "./components/layout/Navbar";
+import Footer from "./components/layout/Footer";
+
+import Login from "./components/auth/Login";
+import Signup from "./components/auth/Signup";
+
+import EmployeeDashboard from "./components/employee/EmployeeDashboard";
+import AgentDashboard from "./components/agent/AgentDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+
+import TicketsPage from "./pages/TicketsPage";
+import TicketList from "./components/tickets/TicketList";
+import TicketDetails from "./components/tickets/TicketDetails";
+
+import { isAuthenticated, getUser } from "./utils/auth";
+
+const PrivateRoute = ({ children, roles }) => {
+  if (!isAuthenticated()) return <Navigate to="/login" replace />;
+  const user = getUser();
+  if (!user) return <Navigate to="/login" replace />;
+  if (roles && !roles.includes(user.role)) return <Navigate to="/" replace />;
+  return children;
+};
+
+export default function App() {
   return (
     <Router>
-      <nav style={{background: 'var(--accent)', padding: '1rem 0', marginBottom: 24}}>
-        <div className="container" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <span style={{color: '#fff', fontWeight: 600, fontSize: '1.3rem', letterSpacing: '0.08em'}}>Help Desk Ticketing System</span>
-          <div>
-            <Link to="/" className="btn-secondary" style={{marginRight: 12}}>All Tickets</Link>
-            <Link to="/create" className="btn-primary">Create Ticket</Link>
-          </div>
-        </div>
-      </nav>
-      <main>
+      <Navbar />
+      <main className="py-4">
         <Routes>
-          <Route path="/" element={<TicketListWrapper />} />
-          <Route path="/create" element={<CreateTicketWrapper />} />
-          <Route path="/tickets/:id" element={<TicketDetailsWrapper />} />
+          {/* Root redirect */}
+          <Route
+            path="/"
+            element={
+              isAuthenticated() ? (
+                <Navigate to={`/${getUser().role.toLowerCase()}`} replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+
+          <Route
+            path="/employee"
+            element={
+              <PrivateRoute roles={["EMPLOYEE"]}>
+                <EmployeeDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/agent"
+            element={
+              <PrivateRoute roles={["AGENT"]}>
+                <AgentDashboard />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute roles={["ADMIN"]}>
+                <AdminDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/tickets"
+            element={
+              <PrivateRoute roles={["EMPLOYEE", "AGENT", "ADMIN"]}>
+                <TicketsPage />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/tickets/list"
+            element={
+              <PrivateRoute roles={["EMPLOYEE", "AGENT", "ADMIN"]}>
+                <TicketList />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/tickets/:id"
+            element={
+              <PrivateRoute roles={["EMPLOYEE", "AGENT", "ADMIN"]}>
+                <TicketDetails />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="*"
+            element={
+              <div className="container py-4">
+                <h2>404 - Page not found</h2>
+              </div>
+            }
+          />
         </Routes>
       </main>
+      <Footer />
     </Router>
   );
 }
-
-//--- Routing-aware wrappers to handle navigation between details/list ---//
-function TicketListWrapper() {
-  const navigate = useNavigate();
-  return <TicketList onViewDetails={id => navigate(`/tickets/${id}`)} />;
-}
-
-function CreateTicketWrapper() {
-  const navigate = useNavigate();
-  return (
-    <CreateTicket onSuccess={ticket => ticket?.id && navigate(`/tickets/${ticket.id}`)} />
-  );
-}
-
-function TicketDetailsWrapper() {
-  const { id } = useLocation().pathname.match(/\d+/) || { id: undefined };
-  // react-router-dom v6: useParams hook, but let's parse from path for robustness
-  const ticketId = parseInt(id || window.location.pathname.split('/').pop());
-  const navigate = useNavigate();
-  return <TicketDetails ticketId={ticketId} onStatusUpdate={() => {}} />;
-}
-
-export default App;
